@@ -16,10 +16,9 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: |
-          cd backend
-          pip install -r requirements.txt
+          python -m pip install -r backend/requirements.txt pytest
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -v --tb=short
 
   frontend-build:
     runs-on: windows-latest

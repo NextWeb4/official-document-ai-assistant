@@ -61,7 +61,12 @@ function run(cmd, args, options = {}) {
     cwd: options.cwd || FRONTEND_DIR,
     shell: process.platform === 'win32',
     stdio: 'inherit',
-    env: { ...process.env, ...options.env },
+    env: {
+      ...process.env,
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1',
+      ...options.env,
+    },
   });
   if (result.status !== 0) {
     throw new Error(`Command failed (${result.status}): ${cmd} ${args.join(' ')}`);

@@ -305,6 +305,12 @@ test('CI type-checks both renderer and Electron processes', () => {
   assert.match(workflow, /npx tsc -p tsconfig\.electron\.json --noEmit/);
 });
 
+test('package builder forces UTF-8 for Python subprocess output', () => {
+  const source = readFileSync(new URL('./build-packages.mjs', import.meta.url), 'utf-8');
+  assert.match(source, /PYTHONIOENCODING:\s*'utf-8'/);
+  assert.match(source, /PYTHONUTF8:\s*'1'/);
+});
+
 test('portable builder defaults to release-compatible architectures and validates every wheel ELF', () => {
   const builder = readFileSync(new URL('./build-portable-debian.py', import.meta.url), 'utf-8');
 
