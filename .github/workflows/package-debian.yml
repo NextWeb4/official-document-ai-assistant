@@ -1,0 +1,44 @@
+name: Package Debian
+
+on:
+  workflow_dispatch:
+    inputs:
+      modes:
+        description: "Build modes"
+        default: "offline,online"
+        required: true
+      archs:
+        description: "Release architectures: x64,arm64. armv7l remains blocked pending Debian 10 native-wheel validation."
+        default: "x64,arm64"
+        required: true
+
+jobs:
+  debian-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Debian package
+        run: |
+          cd frontend
+          MODES="${{ inputs.modes }}" ARCHES="${{ inputs.archs }}" bash scripts/build-debian-docker.sh
+
+      - name: Verify Debian artifacts
+        run: |
+          cd frontend
+          npm ci --ignore-scripts --legacy-peer-deps
+          npm run verify:packages -- --skip-windows --require-debian --debian-modes="${{ inputs.modes }}" --debian-arch="${{ inputs.archs }}"
+
+      - name: Upload Debian artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-packages
+          path: frontend/release/*-debian/*.deb
+          if-no-files-found: error

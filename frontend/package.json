@@ -1,0 +1,181 @@
+{
+  "name": "official-document-ai-assistant",
+  "private": true,
+  "version": "1.4.7",
+  "description": "HaoXiang Document Assistant - document checking and intelligent processing desktop tool",
+  "author": {
+    "name": "HaoXiang Huang",
+    "email": "Rays688888@Gmail.com",
+    "url": "https://nextweb4.github.io/"
+  },
+  "homepage": "https://nextweb4.github.io/",
+  "main": "electron/dist/main.js",
+  "appMode": "offline",
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "electron:dev": "concurrently \"vite\" \"tsc -p tsconfig.electron.json && electron .\"",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "electron:build": "cd .. && python build_backend.py && cd frontend && vite build && tsc -p tsconfig.electron.json && electron-builder --win --x64",
+    "electron:build:preview": "cd .. && python build_backend.py && cd frontend && vite build && tsc -p tsconfig.electron.json && electron-builder --win --x64 --publish=never",
+    "package:win": "node scripts/build-packages.mjs --platform win --modes offline,online",
+    "package:linux": "node scripts/build-packages.mjs --platform linux --modes offline,online",
+    "package:debian:docker": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-debian-docker.ps1",
+    "package:debian:docker:sh": "bash scripts/build-debian-docker.sh",
+    "package:debian:wsl": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-debian-wsl.ps1",
+    "package:debian:portable": "python scripts/build-portable-debian.py",
+    "verify:packages": "node scripts/verify-packages.mjs",
+    "verify:debian:runtime": "bash scripts/verify-debian-runtime.sh",
+    "electron:build:linux": "cd .. && python3 build_backend.py && cd frontend && vite build && tsc -p tsconfig.electron.json && electron-builder --linux --x64 --publish=never --config.electronVersion=18.3.15",
+    "electron:build:linux:arm64": "cd .. && python3 build_backend.py && cd frontend && vite build && tsc -p tsconfig.electron.json && electron-builder --linux --arm64 --publish=never --config.electronVersion=18.3.15"
+  },
+  "dependencies": {
+    "i18next": "^26.3.6",
+    "react-i18next": "^17.0.10"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@radix-ui/react-select": "^2.3.1",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "axios": "^1.18.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "concurrently": "^9.2.4",
+    "electron": "^39.8.5",
+    "electron-builder": "^26.0.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "lucide-react": "^1.21.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.18.0",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.1",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12"
+  },
+  "build": {
+    "appId": "io.github.nextweb4.official-document-assistant",
+    "productName": "HaoXiang Document Assistant",
+    "copyright": "Copyright (c) 2026 HaoXiang Huang. Includes modified portions under the MIT License.",
+    "icon": "build/icon.png",
+    "afterPack": "scripts/after-pack-prune.cjs",
+    "files": [
+      "dist/**/*",
+      "electron/dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "msi"
+      ],
+      "executableName": "official-document-ai-assistant",
+      "artifactName": "official-document-ai-assistant-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HaoXiang Document Assistant",
+      "unicode": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "msi": {
+      "artifactName": "official-document-ai-assistant-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "executableName": "official-document-ai-assistant",
+      "artifactName": "official-document-ai-assistant-${version}-${arch}.${ext}",
+      "maintainer": "HaoXiang Huang <Rays688888@Gmail.com>",
+      "vendor": "HaoXiang Huang",
+      "category": "Office"
+    },
+    "deb": {
+      "depends": [
+        "libc6",
+        "libgcc1 | libgcc-s1",
+        "libglib2.0-0",
+        "libnspr4",
+        "libnss3",
+        "libatk1.0-0",
+        "libatk-bridge2.0-0",
+        "libcups2",
+        "libdbus-1-3",
+        "libdrm2",
+        "libgtk-3-0",
+        "libpango-1.0-0",
+        "libcairo2",
+        "libx11-6",
+        "libx11-xcb1",
+        "libxcomposite1",
+        "libxdamage1",
+        "libxext6",
+        "libxfixes3",
+        "libxrandr2",
+        "libxshmfence1",
+        "libgbm1",
+        "libexpat1",
+        "libxcb1",
+        "libxkbcommon0",
+        "libasound2",
+        "libudev1",
+        "libnotify4",
+        "libxss1",
+        "libxtst6",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "xdg-utils"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "extraResources": [
+      {
+        "from": "dist-resources/backend/backend_server",
+        "to": "backend_server"
+      },
+      {
+        "from": "dist-resources/backend/rules",
+        "to": "rules"
+      },
+      {
+        "from": "dist-resources/backend/templates",
+        "to": "templates"
+      },
+      {
+        "from": "dist-resources/backend/data",
+        "to": "data"
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
+    ]
+  }
+}

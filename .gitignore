@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.egg-info/
+.venv/
+venv/
+*.egg
+*.db
+.pytest_cache/
+
+# Node and frontend output
+node_modules/
+frontend/dist/
+frontend/out/
+frontend/release/
+frontend/dist-resources/
+frontend/.cache/
+.cache/
+.npm/
+.turbo/
+.next/cache/
+
+# IDE and OS state
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Build and release output
+/dist/
+/build/
+/release/
+release-assets/
+target/
+bin/
+obj/
+*.exe
+*.msi
+*.nsis
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.tar.gz
+
+# Logs and runtime data
+*.log
+logs/
+data/
+output/
+tmp/
+temp/
+.learnings/
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+token
+token.*
+secret
+secret.*
+credentials
+credentials.*
+*.key
+*.pem
+
+# Backups and editor lock files
+*.bak
+*.backup
+~$*
+
+# Generated PyInstaller and Office plugin output
+backend/build/
+backend/dist/
+office-plugin/node_modules/
+office-plugin/dist/
+
+# Historical/local material excluded from the clean public repository
+docs/archive/
+docs/reports/
+免安装版/
+公文模板/
+
+# Font binaries are local-only and are never published or packaged.
+TTF/

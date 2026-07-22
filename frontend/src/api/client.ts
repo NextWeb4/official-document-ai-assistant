@@ -1,0 +1,159 @@
+/*
+ * This file is part of the Official Document AI Assistant.
+ * (c) 2026 Jose AI (https://www.linhut.cn)
+ * Licensed under the MIT License. See the LICENSE file for details.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * API Client - Axios 实例配置
+ *
+ * 本地桌面版默认直连 http://127.0.0.1:8765。
+ * Electron 开发时 Vite 只作为桌面壳调试服务，不作为独立网页版入口。
+ *
+ * 所有 API 调用必须通过此 client，禁止直接 fetch。
+ */
+import axios from 'axios';
+import { filenameFromContentDisposition } from './contentDisposition.mjs';
+
+type ElectronApiSurface = {
+  getBackendStatus?: unknown;
+};
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronApiSurface;
+  }
+}
+
+/**
+ * 获取 API 基础地址。
+ * 优先级：Electron IPC > 环境变量 > 默认值。
+ */
+function getBaseUrl(): string {
+  // Electron 环境：通过 IPC 获取后端地址
+  if (typeof window !== 'undefined' && window.electronAPI?.getBackendStatus) {
+    // 同步返回已知地址（Electron main 进程已确认后端可用）
+    return 'http://127.0.0.1:8765';
+  }
+  // Vite 环境变量
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // 开发模式下 Vite proxy 会处理 /api，所以用空字符串
+  if (import.meta.env.DEV) {
+    return '';
+  }
+  // 生产默认
+  return 'http://127.0.0.1:8765';
+}
+
+const API_BASE_URL = getBaseUrl();
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+}) as any;
+
+// 请求拦截器
+apiClient.interceptors.request.use(
+  (config) => {
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 响应拦截器
+apiClient.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  (error) => {
+    // 统一错误处理 — 分类化错误信息
+    const status = error.response?.status;
+    const detail = error.response?.data?.detail;
+
+    let message: string;
+    if (!error.response) {
+      message = '无法连接到后端服务，请确认服务已启动';
+    } else if (status === 404) {
+      message = detail || '请求的资源不存在';
+    } else if (status === 400) {
+      message = detail || '请求参数错误';
+    } else if (status === 500) {
+      message = detail || '后端处理异常';
+    } else {
+      message = detail || error.message || '请求失败';
+    }
+
+    console.error(`API Error [${status}]:`, message);
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * 下载文件的辅助函数。
+ * 使用 fetch + blob，可捕获 HTTP 错误并给出提示。
+ */
+export async function downloadFile(endpoint: string, filename: string): Promise<void> {
+  const url = `${API_BASE_URL}${endpoint}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      let msg = `下载失败 (HTTP ${resp.status})`;
+      try { msg = JSON.parse(text).detail || msg; } catch {}
+      throw new Error(msg);
+    }
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filenameFromContentDisposition(resp.headers.get('Content-Disposition')) || filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '下载失败，请重试';
+    console.error('downloadFile error:', err);
+    alert(message);
+  }
+}
+
+export async function downloadPostFile(endpoint: string, payload: unknown, filename: string): Promise<void> {
+  const url = `${API_BASE_URL}${endpoint}`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      let msg = `下载失败 (HTTP ${resp.status})`;
+      try { msg = JSON.parse(text).detail || msg; } catch {}
+      throw new Error(msg);
+    }
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filenameFromContentDisposition(resp.headers.get('Content-Disposition')) || filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '下载失败，请重试';
+    console.error('downloadPostFile error:', err);
+    alert(message);
+    throw err;
+  }
+}
+
+export default apiClient;

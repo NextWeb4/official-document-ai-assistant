@@ -1,0 +1,9 @@
+template_name: 福建省人民政府公文模板
+document_type: fujian_province
+
+region:
+  province: 福建省
+  level: province
+
+check_rules: []
+fix_rules: []

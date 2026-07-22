@@ -1,0 +1,61 @@
+name: "福建省人民政府公文模板"
+type: "fujian_province"
+version: "1.0"
+author: "HaoXiang Huang"
+standard: "GB/T 9704-2012"
+region:
+  province: "福建省"
+  level: "province"
+page:
+  size: "A4"
+  margins:
+    top: "3.7cm"
+    bottom: "3.5cm"
+    left: "2.8cm"
+    right: "2.6cm"
+styles:
+  title:
+    style_name: "福建省公文标题"
+    font_east_asia: "方正小标宋简体"
+    font_latin: "Times New Roman"
+    size: "22pt"
+    bold: false
+    alignment: "center"
+    space_after: "20pt"
+  body:
+    style_name: "福建省公文正文"
+    font_east_asia: "仿宋_GB2312"
+    font_latin: "Times New Roman"
+    size: "16pt"
+    alignment: "justify"
+    line_spacing: "28.95pt"
+    first_line_indent: "2em"
+  subtitle:
+    style_name: "福建省公文小标题"
+    font_east_asia: "黑体"
+    font_latin: "Times New Roman"
+    size: "16pt"
+    bold: true
+    alignment: "left"
+    line_spacing: "28.95pt"
+    first_line_indent: "2em"
+  signature:
+    style_name: "福建省公文落款"
+    font_east_asia: "仿宋_GB2312"
+    font_latin: "Times New Roman"
+    size: "16pt"
+    alignment: "right"
+sample:
+  title: "福建省人民政府关于XXX工作的通知"
+  paragraphs:
+    - "各设区市人民政府、平潭综合实验区管委会，省人民政府各部门、各直属机构："
+    - ""
+    - "为进一步做好XXX工作，现将有关事项通知如下："
+    - "一、总体要求"
+    - "（具体内容）"
+    - "二、工作任务"
+    - "（具体内容）"
+    - "三、保障措施"
+    - "（具体内容）"
+    - "福建省人民政府"
+    - "XXXX年XX月XX日"
