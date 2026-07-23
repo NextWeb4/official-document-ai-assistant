@@ -166,6 +166,11 @@ export function decodeDebianTarMember(memberName, buffer) {
   throw new Error(`Unsupported Debian tar member compression: ${memberName}`);
 }
 
+export function normalizeTarEntryName(name) {
+  if (name.startsWith('./') || name.startsWith('/')) return name;
+  return `./${name}`;
+}
+
 function listTar(tar) {
   const names = [];
   let offset = 0;
@@ -179,7 +184,7 @@ function listTar(tar) {
     const size = Number.parseInt(sizeOctal || '0', 8);
     const bodyStart = offset + 512;
     const bodyEnd = bodyStart + size;
-    const entryName = longName ?? (prefix ? `${prefix}/${name}` : name);
+    const entryName = normalizeTarEntryName(longName ?? (prefix ? `${prefix}/${name}` : name));
     if (name === '././@LongLink') {
       longName = tar.subarray(bodyStart, bodyEnd).toString('utf-8').replace(/\0.*$/, '');
     } else {
@@ -209,7 +214,7 @@ function findTarEntriesInfo(tar, wantedNames) {
     const linkName = header.subarray(157, 257).toString('utf-8').replace(/\0.*$/, '');
     const bodyStart = offset + 512;
     const bodyEnd = bodyStart + size;
-    const entryName = longName ?? (prefix ? `${prefix}/${name}` : name);
+    const entryName = normalizeTarEntryName(longName ?? (prefix ? `${prefix}/${name}` : name));
     if (name === '././@LongLink') {
       longName = tar.subarray(bodyStart, bodyEnd).toString('utf-8').replace(/\0.*$/, '');
     } else {
