@@ -281,9 +281,28 @@ test('runtime verifier requires GUI and attributes backend startup to Electron',
   assert.match(runtime, /expected app_mode=\{expected\}/);
   assert.match(runtime, /document assistant package is not installed after dpkg\/apt completed/);
   assert.match(runtime, /apt-get install -f -y --no-install-recommends/);
+  assert.match(runtime, /find \/opt -mindepth 2 -maxdepth 2 -type f -name "\$PACKAGE" -perm \/111/);
+  assert.match(runtime, /ELECTRON="\$\{ELECTRON_CANDIDATES\[0\]\}"/);
+  assert.match(runtime, /APP_DIR="\$\(dirname "\$ELECTRON"\)"/);
   assert.match(runtime, /verify_dynamic_links/);
   assert.match(runtime, /ldd "\$candidate"/);
   assert.match(runtime, /unresolved shared library/);
+});
+
+test('Debian release workflow runs GUI validation for x64 and arm64 on Debian 10', () => {
+  const workflow = readFileSync(
+    new URL('../../.github/workflows/verify-debian-release.yml', import.meta.url),
+    'utf-8',
+  );
+
+  assert.match(workflow, /actions\/download-artifact@v4/);
+  assert.match(workflow, /run-id: \$\{\{ inputs\.run_id \}\}/);
+  assert.match(workflow, /arch: x64[\s\S]*platform: linux\/amd64/);
+  assert.match(workflow, /arch: arm64[\s\S]*platform: linux\/arm64/);
+  assert.match(workflow, /debian:10\.10-slim/);
+  assert.match(workflow, /xauth xvfb/);
+  assert.match(workflow, /verify-debian-runtime\.sh/);
+  assert.doesNotMatch(workflow, /ALLOW_NON_RELEASE_(?:OS|NO_GUI)/);
 });
 
 test('WSL builder provisions pinned runtimes and builds only on Linux ext4', () => {

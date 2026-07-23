@@ -393,6 +393,18 @@ if ! dpkg-query -W -f='${Status}\n' "$PACKAGE" 2>/dev/null | grep -qx 'install o
   exit 1
 fi
 
+mapfile -t ELECTRON_CANDIDATES < <(
+  find /opt -mindepth 2 -maxdepth 2 -type f -name "$PACKAGE" -perm /111 -print
+)
+if [[ "${#ELECTRON_CANDIDATES[@]}" != "1" ]]; then
+  echo "ERROR: expected exactly one installed Electron executable for $PACKAGE; found ${#ELECTRON_CANDIDATES[@]}." >&2
+  printf '  %s\n' "${ELECTRON_CANDIDATES[@]}" >&2
+  exit 1
+fi
+ELECTRON="${ELECTRON_CANDIDATES[0]}"
+APP_DIR="$(dirname "$ELECTRON")"
+BACKEND="${APP_DIR}/resources/backend_server/backend_server"
+
 list_installed_libreoffice >"$LIBREOFFICE_AFTER"
 NEW_LIBREOFFICE_PACKAGES="$(comm -13 "$LIBREOFFICE_BEFORE" "$LIBREOFFICE_AFTER")"
 if [[ -n "$NEW_LIBREOFFICE_PACKAGES" ]]; then

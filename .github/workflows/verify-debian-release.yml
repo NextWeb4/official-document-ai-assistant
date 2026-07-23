@@ -1,0 +1,72 @@
+name: Verify Debian Release Runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Successful Package Debian workflow run containing debian-packages"
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+          path: frontend/release
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify install and Electron GUI on Debian 10
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+          TARGET_PLATFORM: ${{ matrix.platform }}
+        run: |
+          docker run --rm \
+            --platform "$TARGET_PLATFORM" \
+            --shm-size=1g \
+            -e TARGET_ARCH="$TARGET_ARCH" \
+            -v "$PWD:/workspace:ro" \
+            debian:10.10-slim \
+            bash -lc '
+              set -euo pipefail
+              sed -i \
+                -e "s/deb.debian.org/archive.debian.org/g" \
+                -e "s/security.debian.org/archive.debian.org/g" \
+                -e "/buster-updates/d" \
+                /etc/apt/sources.list
+              printf "Acquire::Check-Valid-Until \"false\";\n" > /etc/apt/apt.conf.d/99archive-valid-until
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                bash ca-certificates curl findutils passwd procps sudo xauth xvfb
+              useradd --create-home --shell /bin/bash verifier
+              printf "verifier ALL=(ALL) NOPASSWD:ALL\n" > /etc/sudoers.d/verifier
+              chmod 0440 /etc/sudoers.d/verifier
+              for mode in offline online; do
+                runuser -u verifier -- env \
+                  HOME=/home/verifier \
+                  MODE="$mode" \
+                  ARCH="$TARGET_ARCH" \
+                  bash /workspace/frontend/scripts/verify-debian-runtime.sh
+              done
+            '
