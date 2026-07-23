@@ -369,6 +369,13 @@ test('package builder forces UTF-8 for Python subprocess output', () => {
   assert.match(source, /PYTHONUTF8:\s*'1'/);
 });
 
+test('Linux afterPack writes a pinned Electron version marker', () => {
+  const source = readFileSync(new URL('./after-pack-prune.cjs', import.meta.url), 'utf-8');
+  assert.match(source, /electronPlatformName === 'linux'/);
+  assert.match(source, /config\.electronVersion/);
+  assert.match(source, /'electron-version'/);
+});
+
 test('portable builder defaults to release-compatible architectures and validates every wheel ELF', () => {
   const builder = readFileSync(new URL('./build-portable-debian.py', import.meta.url), 'utf-8');
 

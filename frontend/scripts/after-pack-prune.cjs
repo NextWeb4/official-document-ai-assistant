@@ -1,4 +1,4 @@
-const { readdirSync, rmSync, existsSync } = require('node:fs');
+const { readdirSync, rmSync, existsSync, writeFileSync } = require('node:fs');
 const path = require('node:path');
 
 module.exports = async function afterPack(context) {
@@ -22,5 +22,13 @@ module.exports = async function afterPack(context) {
   const defaultApp = path.join(appOutDir, 'resources', 'default_app.asar');
   if (existsSync(defaultApp)) {
     rmSync(defaultApp, { force: true });
+  }
+
+  if (context.electronPlatformName === 'linux') {
+    const electronVersion = context.packager.config.electronVersion;
+    if (typeof electronVersion !== 'string' || electronVersion.length === 0) {
+      throw new Error('Linux packaging requires an explicit electronVersion');
+    }
+    writeFileSync(path.join(appOutDir, 'electron-version'), `${electronVersion}\n`, 'utf-8');
   }
 };

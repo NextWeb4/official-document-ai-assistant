@@ -612,8 +612,9 @@ function verifyDebian(mode, arch, required) {
   const ffmpeg = findTarEntry(dataTar, ffmpegPath);
   verifyElfMachine(ffmpeg, ffmpegPath, expectedElf.class, expectedElf.machine);
   const ffmpegGlibc = verifyGlibcCeiling(ffmpeg, ffmpegPath);
-  const electronVersionPath = `${installDir}/version`;
-  let electronVersion = dataNames.has(electronVersionPath)
+  const electronVersionPath = [`${installDir}/electron-version`, `${installDir}/version`]
+    .find((name) => dataNames.has(name));
+  let electronVersion = electronVersionPath
     ? findTarEntry(dataTar, electronVersionPath).toString('utf-8').trim()
     : null;
   verifyNoFontArchiveEntries([...dataNames], file);
