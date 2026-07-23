@@ -676,7 +676,7 @@ function verifyDebian(mode, arch, required) {
   const displayName = `HaoXiang Document Assistant ${mode === 'online' ? 'Online' : 'Offline'}`;
   const expectedDesktopExec = packagedLauncher
     ? `Exec=/usr/bin/${executableName}`
-    : `Exec="${electronTarget}" %U`;
+    : `Exec=${electronTarget} %U`;
   for (const expected of [
     ...(packagedLauncher ? [`TryExec=/usr/bin/${executableName}`] : []),
     expectedDesktopExec,

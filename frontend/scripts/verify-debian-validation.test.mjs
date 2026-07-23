@@ -259,6 +259,7 @@ test('package verifier scans every data archive entry for ELF payloads', () => {
   assert.doesNotMatch(verifier, /nativeCandidatePath/);
   assert.match(verifier, /const expectedInstallDir = `\.\/opt\/\$\{executableName\}`/);
   assert.match(verifier, /Unexpected Debian install directory/);
+  assert.match(verifier, /: `Exec=\$\{electronTarget\} %U`/);
   assert.match(verifier, /`Name=\$\{displayName\}`/);
 });
 
