@@ -57,6 +57,7 @@ for arch in "${arch_list[@]}"; do
 
   container_script="$(cat <<EOF
 set -euo pipefail
+cd /
 rm -rf /build/work
 mkdir -p /build/work
 rsync -a --delete \

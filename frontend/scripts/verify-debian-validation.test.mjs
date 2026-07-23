@@ -298,6 +298,15 @@ test('Debian package builders run structural verification without requiring Wind
   assert.match(verifier, /: \['x64', 'arm64'\];/);
 });
 
+test('Docker builders leave the image workdir before replacing the staging tree', () => {
+  const shellBuilder = readFileSync(new URL('./build-debian-docker.sh', import.meta.url), 'utf-8');
+  const powershellBuilder = readFileSync(new URL('./build-debian-docker.ps1', import.meta.url), 'utf-8');
+
+  for (const builder of [shellBuilder, powershellBuilder]) {
+    assert.match(builder, /set -euo pipefail\r?\ncd \/\r?\nrm -rf \/build\/work/);
+  }
+});
+
 test('CI type-checks both renderer and Electron processes', () => {
   const workflow = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf-8');
 

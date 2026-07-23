@@ -67,6 +67,7 @@ foreach ($arch in $archList) {
 
   $containerScript = @"
 set -euo pipefail
+cd /
 rm -rf /build/work
 mkdir -p /build/work
 rsync -a --delete \
