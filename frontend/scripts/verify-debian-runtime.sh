@@ -343,7 +343,6 @@ import socket
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("127.0.0.1", int(os.environ["PORT_TO_CHECK"])))
 except OSError:
     raise SystemExit(1)
@@ -358,6 +357,72 @@ PY
     $2 ~ port "$" && $4 == "0A" { listening=1 }
     END { exit(listening ? 0 : 1) }
   ' /proc/net/tcp /proc/net/tcp6 2>/dev/null
+}
+
+list_port_listener_pids() {
+  local port_hex
+  local socket_inodes
+  local proc
+  local pid
+  local fd
+  local target
+  local inode
+
+  port_hex="$(printf '%04X' "$PORT")"
+  socket_inodes="$(awk -v port=":${port_hex}" '
+    $2 ~ port "$" && $4 == "0A" && $10 != "0" { print $10 }
+  ' /proc/net/tcp /proc/net/tcp6 2>/dev/null | sort -u)"
+  [[ -n "$socket_inodes" ]] || return 0
+
+  for proc in /proc/[0-9]*; do
+    [[ -d "$proc/fd" ]] || continue
+    pid="${proc##*/}"
+    for fd in "$proc"/fd/*; do
+      [[ -e "$fd" || -L "$fd" ]] || continue
+      target="$(readlink "$fd" 2>/dev/null || true)"
+      [[ "$target" == socket:\[*\] ]] || continue
+      inode="${target#socket:[}"
+      inode="${inode%]}"
+      if grep -qx "$inode" <<<"$socket_inodes"; then
+        printf '%s\n' "$pid"
+        break
+      fi
+    done
+  done
+}
+
+stop_backend_port_owners() {
+  local pids
+  local pid
+  local remaining
+
+  pids="$(list_port_listener_pids)"
+  [[ -n "$pids" ]] || return 0
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] || continue
+    if ! matches_backend_process "$pid"; then
+      echo "ERROR: refusing to stop unrecognized port owner PID ${pid}." >&2
+      return 1
+    fi
+    kill "$pid" >/dev/null 2>&1 || true
+  done <<<"$pids"
+
+  for _ in $(seq 1 20); do
+    remaining="$(list_port_listener_pids)"
+    [[ -z "$remaining" ]] && return 0
+    sleep 0.25
+  done
+  remaining="$(list_port_listener_pids)"
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] || continue
+    matches_backend_process "$pid" || return 1
+    kill -KILL "$pid" >/dev/null 2>&1 || true
+  done <<<"$remaining"
+  for _ in $(seq 1 20); do
+    [[ -z "$(list_port_listener_pids)" ]] && return 0
+    sleep 0.25
+  done
+  return 1
 }
 
 stop_known_backend() {
@@ -399,6 +464,10 @@ cleanup() {
   fi
   if ! stop_installed_processes >/dev/null 2>&1; then
     echo "ERROR: failed to stop installed application processes during cleanup." >&2
+    cleanup_failed=1
+  fi
+  if ! stop_backend_port_owners; then
+    echo "ERROR: failed to stop the recognized backend port owner." >&2
     cleanup_failed=1
   fi
   for _ in $(seq 1 40); do

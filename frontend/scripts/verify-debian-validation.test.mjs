@@ -293,8 +293,11 @@ test('runtime verifier requires GUI and attributes backend startup to Electron',
   assert.match(runtime, /grep -q 'Window shown' "\$ELECTRON_LOG"/);
   assert.match(runtime, /failed to stop installed application processes during cleanup/);
   assert.match(runtime, /PORT_TO_CHECK="\$PORT" python3/);
-  assert.match(runtime, /sock\.setsockopt\(socket\.SOL_SOCKET, socket\.SO_REUSEADDR, 1\)/);
   assert.match(runtime, /sock\.bind\(\("127\.0\.0\.1", int\(os\.environ\["PORT_TO_CHECK"\]\)\)\)/);
+  assert.doesNotMatch(runtime, /SO_REUSEADDR/);
+  assert.match(runtime, /list_port_listener_pids/);
+  assert.match(runtime, /refusing to stop unrecognized port owner PID/);
+  assert.match(runtime, /stop_backend_port_owners/);
   assert.match(runtime, /stop_known_backend/);
   assert.match(runtime, /known backend process did not release/);
   assert.match(runtime, /backend port remained unavailable after cleanup/);
