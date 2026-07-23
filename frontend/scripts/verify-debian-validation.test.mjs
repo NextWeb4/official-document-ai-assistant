@@ -257,6 +257,9 @@ test('package verifier scans every data archive entry for ELF payloads', () => {
 
   assert.match(verifier, /findTarEntriesInfo\(dataTar, \[\.\.\.dataNames\]\)/);
   assert.doesNotMatch(verifier, /nativeCandidatePath/);
+  assert.match(verifier, /const expectedInstallDir = `\.\/opt\/\$\{executableName\}`/);
+  assert.match(verifier, /Unexpected Debian install directory/);
+  assert.match(verifier, /`Name=\$\{displayName\}`/);
 });
 
 test('runtime verifier requires GUI and attributes backend startup to Electron', () => {
@@ -395,6 +398,11 @@ test('package builder forces UTF-8 for Python subprocess output', () => {
   const source = readFileSync(new URL('./build-packages.mjs', import.meta.url), 'utf-8');
   assert.match(source, /PYTHONIOENCODING:\s*'utf-8'/);
   assert.match(source, /PYTHONUTF8:\s*'1'/);
+  assert.match(
+    source,
+    /pkg\.build\.productName = platform === 'linux'[\s\S]*`official-document-ai-assistant-\$\{mode\}`/,
+  );
+  assert.match(source, /desktop:[\s\S]*entry:[\s\S]*Name: displayName/);
 });
 
 test('Linux afterPack writes a pinned Electron version marker', () => {

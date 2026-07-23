@@ -91,6 +91,7 @@ function modeLabel(mode) {
 function updatePackage(basePackage, mode, platform, arch = 'x64') {
   const pkg = structuredClone(basePackage);
   const label = modeLabel(mode);
+  const displayName = `${basePackage.build.productName} ${label}`;
   pkg.appMode = mode;
   pkg.build = structuredClone(basePackage.build);
   if (platform === 'linux') {
@@ -100,7 +101,9 @@ function updatePackage(basePackage, mode, platform, arch = 'x64') {
     pkg.build.electronDist = path.join(FRONTEND_DIR, 'node_modules', 'electron', 'dist');
   }
   pkg.build.appId = `${basePackage.build.appId}.${mode}`;
-  pkg.build.productName = `${basePackage.build.productName} ${label}`;
+  pkg.build.productName = platform === 'linux'
+    ? `official-document-ai-assistant-${mode}`
+    : displayName;
   pkg.build.directories = {
     ...pkg.build.directories,
     output: platform === 'win' ? `release/${mode}-windows` : `release/${mode}-debian`,
@@ -125,6 +128,13 @@ function updatePackage(basePackage, mode, platform, arch = 'x64') {
     target: ['deb'],
     executableName: `official-document-ai-assistant-${mode}`,
     artifactName: `official-document-ai-assistant-${mode}-${pkg.version}-${arch}.\${ext}`,
+    desktop: {
+      ...pkg.build.linux?.desktop,
+      entry: {
+        ...pkg.build.linux?.desktop?.entry,
+        Name: displayName,
+      },
+    },
   };
   pkg.build.deb = {
     ...pkg.build.deb,

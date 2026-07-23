@@ -600,6 +600,10 @@ function verifyDebian(mode, arch, required) {
     file,
   );
   const installDir = electronPath.slice(0, -(executableName.length + 1));
+  const expectedInstallDir = `./opt/${executableName}`;
+  if (installDir !== expectedInstallDir) {
+    throw new Error(`Unexpected Debian install directory in ${file}: ${installDir}`);
+  }
   const electronTarget = electronPath.slice(1);
   const electronInfo = findTarEntryInfo(dataTar, electronPath);
   const electron = electronInfo.body;
@@ -669,12 +673,14 @@ function verifyDebian(mode, arch, required) {
     }
   }
   const desktop = findTarEntry(dataTar, desktopPath).toString('utf-8');
+  const displayName = `HaoXiang Document Assistant ${mode === 'online' ? 'Online' : 'Offline'}`;
   const expectedDesktopExec = packagedLauncher
     ? `Exec=/usr/bin/${executableName}`
     : `Exec="${electronTarget}" %U`;
   for (const expected of [
     ...(packagedLauncher ? [`TryExec=/usr/bin/${executableName}`] : []),
     expectedDesktopExec,
+    `Name=${displayName}`,
     `Icon=${executableName}`,
     'Type=Application',
     'Terminal=false',
