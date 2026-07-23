@@ -313,9 +313,12 @@ test('Debian release workflow runs GUI validation for x64 and arm64 on Debian 10
   assert.match(workflow, /arch: x64[\s\S]*platform: linux\/amd64/);
   assert.match(workflow, /arch: arm64[\s\S]*platform: linux\/arm64/);
   assert.match(workflow, /debian:10\.10-slim/);
+  assert.match(workflow, /--cap-add=SYS_ADMIN/);
+  assert.match(workflow, /--security-opt seccomp=unconfined/);
   assert.match(workflow, /xauth xvfb/);
   assert.match(workflow, /verify-debian-runtime\.sh/);
   assert.doesNotMatch(workflow, /ALLOW_NON_RELEASE_(?:OS|NO_GUI)/);
+  assert.doesNotMatch(workflow, /--no-sandbox/);
 });
 
 test('WSL builder provisions pinned runtimes and builds only on Linux ext4', () => {

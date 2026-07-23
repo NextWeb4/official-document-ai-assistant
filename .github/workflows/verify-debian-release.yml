@@ -44,6 +44,8 @@ jobs:
         run: |
           docker run --rm \
             --platform "$TARGET_PLATFORM" \
+            --cap-add=SYS_ADMIN \
+            --security-opt seccomp=unconfined \
             --shm-size=1g \
             -e TARGET_ARCH="$TARGET_ARCH" \
             -v "$PWD:/workspace:ro" \
