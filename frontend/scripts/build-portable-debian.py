@@ -432,6 +432,7 @@ def prepare_frontend_archives(modes: list[str]) -> None:
                 "private",
                 "version",
                 "description",
+                "license",
                 "author",
                 "homepage",
                 "main",

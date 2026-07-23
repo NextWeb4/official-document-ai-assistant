@@ -613,10 +613,9 @@ function verifyDebian(mode, arch, required) {
   verifyElfMachine(ffmpeg, ffmpegPath, expectedElf.class, expectedElf.machine);
   const ffmpegGlibc = verifyGlibcCeiling(ffmpeg, ffmpegPath);
   const electronVersionPath = `${installDir}/version`;
-  const electronVersion = findTarEntry(dataTar, electronVersionPath).toString('utf-8').trim();
-  if (electronVersion !== DEBIAN_ELECTRON_VERSION) {
-    throw new Error(`Unexpected Electron version in ${file}: ${electronVersion}`);
-  }
+  let electronVersion = dataNames.has(electronVersionPath)
+    ? findTarEntry(dataTar, electronVersionPath).toString('utf-8').trim()
+    : null;
   verifyNoFontArchiveEntries([...dataNames], file);
   const nativeRuntimeSummary = verifyNativeRuntimeSet(
     dataTar,
@@ -635,6 +634,10 @@ function verifyDebian(mode, arch, required) {
   }
   if (appPackage.version !== version) {
     throw new Error(`Debian app.asar has version=${appPackage.version} in ${file}`);
+  }
+  electronVersion ??= appPackage.build?.electronVersion ?? null;
+  if (electronVersion !== DEBIAN_ELECTRON_VERSION) {
+    throw new Error(`Unexpected Electron version in ${file}: ${electronVersion ?? 'missing'}`);
   }
   const launcherPath = `./usr/bin/${executableName}`;
   const desktopPath = `./usr/share/applications/${executableName}.desktop`;
