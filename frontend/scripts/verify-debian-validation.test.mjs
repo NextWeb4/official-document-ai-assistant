@@ -5,6 +5,7 @@ import { gzipSync } from 'node:zlib';
 
 import {
   decodeDebianTarMember,
+  findUniqueTarPath,
   normalizeTarEntryName,
   parseControlFields,
   selectDebianTarMemberName,
@@ -31,6 +32,10 @@ test('Debian tar member handling supports standard gzip and xz package layouts',
   assert.deepEqual(decodeDebianTarMember('data.tar', tar), tar);
   assert.equal(normalizeTarEntryName('opt/app/bin'), './opt/app/bin');
   assert.equal(normalizeTarEntryName('./opt/app/bin'), './opt/app/bin');
+  assert.equal(
+    findUniqueTarPath(new Set(['./opt/Product/app']), (name) => name.endsWith('/app'), 'app'),
+    './opt/Product/app',
+  );
   assert.throws(
     () => selectDebianTarMemberName(
       new Map([['control.tar.gz', tar], ['control.tar.xz', tar]]),

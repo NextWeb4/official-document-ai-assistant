@@ -624,6 +624,7 @@ Section: office
 Priority: optional
 Architecture: {ARCHES[arch]['deb_arch']}
 Maintainer: HaoXiang Huang <Rays688888@Gmail.com>
+License: MIT
 Installed-Size: {size_kib}
 Depends: {depends}
 Homepage: https://nextweb4.github.io/

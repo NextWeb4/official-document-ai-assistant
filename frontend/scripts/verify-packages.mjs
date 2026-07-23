@@ -171,6 +171,14 @@ export function normalizeTarEntryName(name) {
   return `./${name}`;
 }
 
+export function findUniqueTarPath(entries, predicate, label, file = 'tar archive') {
+  const matches = [...entries].filter(predicate);
+  if (matches.length !== 1) {
+    throw new Error(`Expected exactly one ${label} in ${file}; found ${matches.join(', ') || 'none'}`);
+  }
+  return matches[0];
+}
+
 function listTar(tar) {
   const names = [];
   let offset = 0;
@@ -583,7 +591,16 @@ function verifyDebian(mode, arch, required) {
     : arch === 'arm64'
       ? { class: 2, machine: 183 }
       : { class: 1, machine: 40 };
-  const electronPath = `./opt/official-document-ai-assistant-${mode}/official-document-ai-assistant-${mode}`;
+  const dataNames = new Set(listTar(dataTar));
+  const executableName = `official-document-ai-assistant-${mode}`;
+  const electronPath = findUniqueTarPath(
+    dataNames,
+    (name) => name.startsWith('./opt/') && name.endsWith(`/${executableName}`),
+    'Electron executable',
+    file,
+  );
+  const installDir = electronPath.slice(0, -(executableName.length + 1));
+  const electronTarget = electronPath.slice(1);
   const electronInfo = findTarEntryInfo(dataTar, electronPath);
   const electron = electronInfo.body;
   if ((electronInfo.mode & 0o777) !== 0o755) {
@@ -591,16 +608,15 @@ function verifyDebian(mode, arch, required) {
   }
   verifyElfMachine(electron, electronPath, expectedElf.class, expectedElf.machine);
   const electronGlibc = verifyGlibcCeiling(electron, electronPath);
-  const ffmpegPath = `./opt/official-document-ai-assistant-${mode}/libffmpeg.so`;
+  const ffmpegPath = `${installDir}/libffmpeg.so`;
   const ffmpeg = findTarEntry(dataTar, ffmpegPath);
   verifyElfMachine(ffmpeg, ffmpegPath, expectedElf.class, expectedElf.machine);
   const ffmpegGlibc = verifyGlibcCeiling(ffmpeg, ffmpegPath);
-  const electronVersionPath = `./opt/official-document-ai-assistant-${mode}/version`;
+  const electronVersionPath = `${installDir}/version`;
   const electronVersion = findTarEntry(dataTar, electronVersionPath).toString('utf-8').trim();
   if (electronVersion !== DEBIAN_ELECTRON_VERSION) {
     throw new Error(`Unexpected Electron version in ${file}: ${electronVersion}`);
   }
-  const dataNames = new Set(listTar(dataTar));
   verifyNoFontArchiveEntries([...dataNames], file);
   const nativeRuntimeSummary = verifyNativeRuntimeSet(
     dataTar,
@@ -608,7 +624,7 @@ function verifyDebian(mode, arch, required) {
     expectedElf,
     file,
   );
-  const appAsarPath = `./opt/official-document-ai-assistant-${mode}/resources/app.asar`;
+  const appAsarPath = `${installDir}/resources/app.asar`;
   const appPackage = inspectAppAsar(
     findTarEntry(dataTar, appAsarPath),
     file,
@@ -620,27 +636,42 @@ function verifyDebian(mode, arch, required) {
   if (appPackage.version !== version) {
     throw new Error(`Debian app.asar has version=${appPackage.version} in ${file}`);
   }
-  const launcherPath = `./usr/bin/official-document-ai-assistant-${mode}`;
-  const desktopPath = `./usr/share/applications/official-document-ai-assistant-${mode}.desktop`;
-  for (const requiredPath of [launcherPath, desktopPath]) {
-    if (!dataNames.has(requiredPath)) {
-      throw new Error(`Missing ${requiredPath} in ${file}`);
+  const launcherPath = `./usr/bin/${executableName}`;
+  const desktopPath = `./usr/share/applications/${executableName}.desktop`;
+  if (!dataNames.has(desktopPath)) {
+    throw new Error(`Missing ${desktopPath} in ${file}`);
+  }
+  const packagedLauncher = dataNames.has(launcherPath);
+  if (packagedLauncher) {
+    const launcherInfo = findTarEntryInfo(dataTar, launcherPath);
+    if ((launcherInfo.mode & 0o777) !== 0o755) {
+      throw new Error(`Installed launcher is not executable in ${file}`);
+    }
+    verifyPosixLauncher(launcherInfo, launcherPath, electronTarget);
+  } else {
+    const controlNames = new Set(listTar(controlTar));
+    if (!controlNames.has('./postinst')) {
+      throw new Error(`Missing postinst link setup in ${file}`);
+    }
+    const postinstInfo = findTarEntryInfo(controlTar, './postinst');
+    if ((postinstInfo.mode & 0o111) === 0) {
+      throw new Error(`postinst is not executable in ${file}`);
+    }
+    const postinst = postinstInfo.body.toString('utf-8');
+    for (const expected of [`/usr/bin/${executableName}`, electronTarget]) {
+      if (!postinst.includes(expected)) {
+        throw new Error(`postinst is missing ${expected} in ${file}`);
+      }
     }
   }
-  const launcherInfo = findTarEntryInfo(dataTar, launcherPath);
-  if ((launcherInfo.mode & 0o777) !== 0o755) {
-    throw new Error(`Installed launcher is not executable in ${file}`);
-  }
-  verifyPosixLauncher(
-    launcherInfo,
-    launcherPath,
-    `/opt/official-document-ai-assistant-${mode}/official-document-ai-assistant-${mode}`,
-  );
   const desktop = findTarEntry(dataTar, desktopPath).toString('utf-8');
+  const expectedDesktopExec = packagedLauncher
+    ? `Exec=/usr/bin/${executableName}`
+    : `Exec="${electronTarget}" %U`;
   for (const expected of [
-    `TryExec=/usr/bin/official-document-ai-assistant-${mode}`,
-    `Exec=/usr/bin/official-document-ai-assistant-${mode}`,
-    `Icon=official-document-ai-assistant-${mode}`,
+    ...(packagedLauncher ? [`TryExec=/usr/bin/${executableName}`] : []),
+    expectedDesktopExec,
+    `Icon=${executableName}`,
     'Type=Application',
     'Terminal=false',
   ]) {
