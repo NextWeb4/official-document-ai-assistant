@@ -57,6 +57,8 @@ for arch in "${arch_list[@]}"; do
 
   container_script="$(cat <<EOF
 set -euo pipefail
+export PATH="/opt/node/bin:/opt/python/bin:\$PATH"
+export LD_LIBRARY_PATH="/opt/python/lib:\${LD_LIBRARY_PATH:-}"
 cd /
 rm -rf /build/work
 mkdir -p /build/work

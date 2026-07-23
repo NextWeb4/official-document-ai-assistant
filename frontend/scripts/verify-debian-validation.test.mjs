@@ -302,8 +302,17 @@ test('Docker builders leave the image workdir before replacing the staging tree'
   const shellBuilder = readFileSync(new URL('./build-debian-docker.sh', import.meta.url), 'utf-8');
   const powershellBuilder = readFileSync(new URL('./build-debian-docker.ps1', import.meta.url), 'utf-8');
 
+  assert.ok(shellBuilder.includes('export PATH="/opt/node/bin:/opt/python/bin:\\$PATH"'));
+  assert.ok(shellBuilder.includes('export LD_LIBRARY_PATH="/opt/python/lib:\\${LD_LIBRARY_PATH:-}"'));
+  assert.ok(powershellBuilder.includes('export PATH="/opt/node/bin:/opt/python/bin:`$PATH"'));
+  assert.ok(powershellBuilder.includes('export LD_LIBRARY_PATH="/opt/python/lib:`${LD_LIBRARY_PATH:-}"'));
+
   for (const builder of [shellBuilder, powershellBuilder]) {
-    assert.match(builder, /set -euo pipefail\r?\ncd \/\r?\nrm -rf \/build\/work/);
+    const normalized = builder.replaceAll('\r\n', '\n');
+    const leaveWorkdir = normalized.indexOf('\ncd /\n');
+    const removeWorkdir = normalized.indexOf('\nrm -rf /build/work\n');
+    assert.ok(leaveWorkdir > normalized.indexOf('export LD_LIBRARY_PATH='));
+    assert.ok(removeWorkdir > leaveWorkdir);
   }
 });
 

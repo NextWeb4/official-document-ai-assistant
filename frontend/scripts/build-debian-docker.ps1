@@ -67,6 +67,8 @@ foreach ($arch in $archList) {
 
   $containerScript = @"
 set -euo pipefail
+export PATH="/opt/node/bin:/opt/python/bin:`$PATH"
+export LD_LIBRARY_PATH="/opt/python/lib:`${LD_LIBRARY_PATH:-}"
 cd /
 rm -rf /build/work
 mkdir -p /build/work
