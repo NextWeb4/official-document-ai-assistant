@@ -295,6 +295,8 @@ test('runtime verifier requires GUI and attributes backend startup to Electron',
   assert.match(runtime, /PORT_TO_CHECK="\$PORT" python3/);
   assert.match(runtime, /sock\.setsockopt\(socket\.SOL_SOCKET, socket\.SO_REUSEADDR, 1\)/);
   assert.match(runtime, /sock\.bind\(\("127\.0\.0\.1", int\(os\.environ\["PORT_TO_CHECK"\]\)\)\)/);
+  assert.match(runtime, /stop_known_backend/);
+  assert.match(runtime, /known backend process did not release/);
   assert.match(runtime, /backend port remained unavailable after cleanup/);
   assert.match(runtime, /XDG_STATE_HOME="\$XDG_STATE_HOME"/);
   assert.match(runtime, /expected app_mode=\{expected\}/);

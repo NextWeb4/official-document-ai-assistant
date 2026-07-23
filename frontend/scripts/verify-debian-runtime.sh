@@ -360,8 +360,36 @@ PY
   ' /proc/net/tcp /proc/net/tcp6 2>/dev/null
 }
 
+stop_known_backend() {
+  if [[ -z "$BACKEND_PID" ]] \
+    || ! kill -0 "$BACKEND_PID" >/dev/null 2>&1 \
+    || ! matches_backend_process "$BACKEND_PID"; then
+    return 0
+  fi
+
+  kill "$BACKEND_PID" >/dev/null 2>&1 || true
+  for _ in $(seq 1 20); do
+    port_is_bindable && return 0
+    sleep 0.25
+  done
+
+  if kill -0 "$BACKEND_PID" >/dev/null 2>&1 \
+    && matches_backend_process "$BACKEND_PID"; then
+    kill -KILL "$BACKEND_PID" >/dev/null 2>&1 || true
+  fi
+  for _ in $(seq 1 20); do
+    port_is_bindable && return 0
+    sleep 0.25
+  done
+  return 1
+}
+
 cleanup() {
   local cleanup_failed=0
+  if ! stop_known_backend; then
+    echo "ERROR: known backend process did not release 127.0.0.1:${PORT}." >&2
+    cleanup_failed=1
+  fi
   if [[ -n "$ELECTRON_PID" ]] && kill -0 "$ELECTRON_PID" >/dev/null 2>&1; then
     kill "$ELECTRON_PID" >/dev/null 2>&1 || true
   fi
