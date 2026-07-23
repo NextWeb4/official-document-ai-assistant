@@ -67,7 +67,7 @@
 - 福建省政府模板由 `backend/api/routes/templates.py` 的 `_FUJIAN_TEMPLATE_SPECS`、`rules/official/fujian_province.yaml`、`templates/official/fujian_province.yaml` 三处共同维护，新增/改名必须同步更新测试。
 - 前端页面只负责交互和展示；文档解析、规则判断、模板生成逻辑必须留在后端核心模块。
 - 全局导航、主题切换和产品署名只由 `frontend/src/components/layout/` 维护；具体页面通过路由内容区渲染，不直接控制 Electron 窗口外壳。
-- 发布作者元数据的单一来源是 `frontend/package.json`：姓名 `HaoXiang Huang`、邮箱 `Rays688888@Gmail.com`、主页 `https://nextweb4.github.io/`；Electron、README、About、安装包脚本与 Release Notes 必须与其一致。
+- 发布作者元数据的单一来源是 `frontend/package.json`：姓名 `HaoXiang Huang`、邮箱 `Rays688888@Gmail.com`、主页 `https://nextweb4.github.io/`、许可证 `MIT`；Electron、README、About、安装包脚本与 Release Notes 必须与其一致。
 
 ## 7. 禁止事项
 - 不允许把运行时用户数据写入 `rules/official/`、`templates/official/` 或打包资源目录；可写数据应走 `APP_DATA_DIR` 下目录。

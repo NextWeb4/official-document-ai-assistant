@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { gzipSync } from 'node:zlib';
 
 import {
+  decodeDebianTarMember,
   parseControlFields,
+  selectDebianTarMemberName,
   verifyAppMetadata,
   verifyBackendLauncher,
   verifyDebian10NativeBinary,
@@ -13,9 +16,32 @@ import {
   verifyPosixLauncher,
 } from './verify-packages.mjs';
 
+test('Debian tar member handling supports standard gzip and xz package layouts', () => {
+  const members = new Map([
+    ['debian-binary', Buffer.from('2.0\n')],
+    ['control.tar.xz', Buffer.from('control')],
+    ['data.tar.gz', Buffer.from('data')],
+  ]);
+  assert.equal(selectDebianTarMemberName(members, 'control', 'fixture.deb'), 'control.tar.xz');
+  assert.equal(selectDebianTarMemberName(members, 'data', 'fixture.deb'), 'data.tar.gz');
+
+  const tar = Buffer.from('uncompressed tar fixture');
+  assert.deepEqual(decodeDebianTarMember('data.tar.gz', gzipSync(tar)), tar);
+  assert.deepEqual(decodeDebianTarMember('data.tar', tar), tar);
+  assert.throws(
+    () => selectDebianTarMemberName(
+      new Map([['control.tar.gz', tar], ['control.tar.xz', tar]]),
+      'control',
+      'fixture.deb',
+    ),
+    /exactly one control\.tar member/,
+  );
+});
+
 test('application metadata verifier requires the public author identity', () => {
   const valid = {
     name: 'official-document-ai-assistant',
+    license: 'MIT',
     author: {
       name: 'HaoXiang Huang',
       email: 'Rays688888@Gmail.com',
@@ -28,6 +54,10 @@ test('application metadata verifier requires the public author identity', () => 
   assert.throws(
     () => verifyAppMetadata({ ...valid, author: { ...valid.author, email: 'old@example.com' } }, 'fixture', 'offline'),
     /unexpected author email/,
+  );
+  assert.throws(
+    () => verifyAppMetadata({ ...valid, license: 'unknown' }, 'fixture', 'offline'),
+    /unexpected license/,
   );
 });
 
@@ -57,6 +87,7 @@ function elfFixture({ elfClass = 2, machine = 62, strings = [] } = {}) {
 test('Debian control parser unfolds fields and keeps LibreOffice fully separate', () => {
   const control = [
     'Package: official-document-ai-assistant-offline',
+    'License: MIT',
     'Depends: libc6,',
     ' libgtk-3-0',
     '',
@@ -64,6 +95,7 @@ test('Debian control parser unfolds fields and keeps LibreOffice fully separate'
 
   assert.deepEqual(parseControlFields(control), {
     package: 'official-document-ai-assistant-offline',
+    license: 'MIT',
     depends: 'libc6, libgtk-3-0',
   });
   assert.deepEqual(verifyLibreOfficeDependencyPolicy(control), {
@@ -209,7 +241,7 @@ test('backend verifier accepts native PyInstaller and validates portable launche
 test('package verifier scans every data archive entry for ELF payloads', () => {
   const verifier = readFileSync(new URL('./verify-packages.mjs', import.meta.url), 'utf-8');
 
-  assert.match(verifier, /findTarGzEntriesInfo\(dataTar, \[\.\.\.dataNames\]\)/);
+  assert.match(verifier, /findTarEntriesInfo\(dataTar, \[\.\.\.dataNames\]\)/);
   assert.doesNotMatch(verifier, /nativeCandidatePath/);
 });
 

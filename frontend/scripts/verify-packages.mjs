@@ -59,6 +59,9 @@ export function verifyAppMetadata(pkg, file, expectedMode) {
   if (pkg.homepage !== expectedAuthor.url) {
     throw new Error(`${file} has unexpected homepage: ${pkg.homepage}`);
   }
+  if (pkg.license !== 'MIT') {
+    throw new Error(`${file} has unexpected license: ${pkg.license}`);
+  }
   if (pkg.appMode !== expectedMode) {
     throw new Error(`${file} has appMode=${pkg.appMode}, expected ${expectedMode}`);
   }
@@ -124,8 +127,46 @@ function readArMembers(file) {
   return members;
 }
 
-function listTarGz(buffer) {
-  const tar = gunzipSync(buffer);
+export function selectDebianTarMemberName(members, kind, file = 'Debian package') {
+  const names = [...members.keys()].filter((name) => (
+    name === `${kind}.tar`
+    || name === `${kind}.tar.gz`
+    || name === `${kind}.tar.xz`
+    || name === `${kind}.tar.zst`
+  ));
+  if (names.length !== 1) {
+    throw new Error(
+      `Expected exactly one ${kind}.tar member in ${file}; found ${names.join(', ') || 'none'}`,
+    );
+  }
+  return names[0];
+}
+
+function decodeExternalTar(memberName, buffer, command, args) {
+  const result = spawnSync(command, args, {
+    input: buffer,
+    encoding: null,
+    maxBuffer: 1024 * 1024 * 1024,
+  });
+  if (result.error) {
+    throw new Error(`${command} is required to decode ${memberName}: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    const detail = result.stderr?.toString('utf-8').trim() || `exit code ${result.status}`;
+    throw new Error(`Unable to decode ${memberName} with ${command}: ${detail}`);
+  }
+  return result.stdout;
+}
+
+export function decodeDebianTarMember(memberName, buffer) {
+  if (memberName.endsWith('.tar.gz')) return gunzipSync(buffer);
+  if (memberName.endsWith('.tar.xz')) return decodeExternalTar(memberName, buffer, 'xz', ['-dc']);
+  if (memberName.endsWith('.tar.zst')) return decodeExternalTar(memberName, buffer, 'zstd', ['-dcq']);
+  if (memberName.endsWith('.tar')) return buffer;
+  throw new Error(`Unsupported Debian tar member compression: ${memberName}`);
+}
+
+function listTar(tar) {
   const names = [];
   let offset = 0;
   let longName = null;
@@ -150,8 +191,7 @@ function listTarGz(buffer) {
   return names;
 }
 
-function findTarGzEntriesInfo(buffer, wantedNames) {
-  const tar = gunzipSync(buffer);
+function findTarEntriesInfo(tar, wantedNames) {
   const wanted = new Set(wantedNames);
   const found = new Map();
   let offset = 0;
@@ -185,12 +225,12 @@ function findTarGzEntriesInfo(buffer, wantedNames) {
   throw new Error(`Missing ${missing.join(', ')}`);
 }
 
-function findTarGzEntryInfo(buffer, wantedName) {
-  return findTarGzEntriesInfo(buffer, [wantedName]).get(wantedName);
+function findTarEntryInfo(tar, wantedName) {
+  return findTarEntriesInfo(tar, [wantedName]).get(wantedName);
 }
 
-function findTarGzEntry(buffer, wantedName) {
-  return findTarGzEntryInfo(buffer, wantedName).body;
+function findTarEntry(tar, wantedName) {
+  return findTarEntryInfo(tar, wantedName).body;
 }
 
 function basename(file) {
@@ -397,7 +437,7 @@ export function verifyBackendLauncher(info, file, expectedElf) {
 }
 
 function verifyNativeRuntimeSet(dataTar, dataNames, expectedElf, file) {
-  const entries = findTarGzEntriesInfo(dataTar, [...dataNames]);
+  const entries = findTarEntriesInfo(dataTar, [...dataNames]);
   const bundledSonames = new Set(
     [...entries]
       .filter(([, info]) => isElf(info.body))
@@ -479,8 +519,7 @@ export function verifyLibreOfficeDependencyPolicy(control, file = 'Debian contro
   return Object.fromEntries(relationshipFields.map((field) => [field, fields[field] ?? '']));
 }
 
-function readControl(buffer) {
-  const tar = gunzipSync(buffer);
+function readControl(tar) {
   let offset = 0;
   while (offset + 512 <= tar.length) {
     const header = tar.subarray(offset, offset + 512);
@@ -514,15 +553,20 @@ function verifyDebian(mode, arch, required) {
   }
 
   const members = readArMembers(file);
-  for (const requiredMember of ['debian-binary', 'control.tar.gz', 'data.tar.gz']) {
-    if (!members.has(requiredMember)) {
-      throw new Error(`Missing ${requiredMember} in ${file}`);
-    }
+  if (!members.has('debian-binary')) {
+    throw new Error(`Missing debian-binary in ${file}`);
   }
-  const control = readControl(members.get('control.tar.gz'));
+  const controlMember = selectDebianTarMemberName(members, 'control', file);
+  const dataMember = selectDebianTarMemberName(members, 'data', file);
+  const controlTar = decodeDebianTarMember(controlMember, members.get(controlMember));
+  const dataTar = decodeDebianTarMember(dataMember, members.get(dataMember));
+  const control = readControl(controlTar);
   const controlFields = parseControlFields(control);
   if (controlFields.package !== `official-document-ai-assistant-${mode}`) {
     throw new Error(`Unexpected Debian package name in ${file}`);
+  }
+  if (controlFields.license !== 'MIT') {
+    throw new Error(`Unexpected Debian license in ${file}: ${controlFields.license ?? ''}`);
   }
   const expectedDebArch = arch === 'x64' ? 'amd64' : arch === 'arm64' ? 'arm64' : 'armhf';
   if (controlFields.architecture !== expectedDebArch) {
@@ -535,7 +579,7 @@ function verifyDebian(mode, arch, required) {
       ? { class: 2, machine: 183 }
       : { class: 1, machine: 40 };
   const electronPath = `./opt/official-document-ai-assistant-${mode}/official-document-ai-assistant-${mode}`;
-  const electronInfo = findTarGzEntryInfo(members.get('data.tar.gz'), electronPath);
+  const electronInfo = findTarEntryInfo(dataTar, electronPath);
   const electron = electronInfo.body;
   if ((electronInfo.mode & 0o777) !== 0o755) {
     throw new Error(`Electron executable mode is not 755 in ${file}`);
@@ -543,28 +587,25 @@ function verifyDebian(mode, arch, required) {
   verifyElfMachine(electron, electronPath, expectedElf.class, expectedElf.machine);
   const electronGlibc = verifyGlibcCeiling(electron, electronPath);
   const ffmpegPath = `./opt/official-document-ai-assistant-${mode}/libffmpeg.so`;
-  const ffmpeg = findTarGzEntry(members.get('data.tar.gz'), ffmpegPath);
+  const ffmpeg = findTarEntry(dataTar, ffmpegPath);
   verifyElfMachine(ffmpeg, ffmpegPath, expectedElf.class, expectedElf.machine);
   const ffmpegGlibc = verifyGlibcCeiling(ffmpeg, ffmpegPath);
   const electronVersionPath = `./opt/official-document-ai-assistant-${mode}/version`;
-  const electronVersion = findTarGzEntry(
-    members.get('data.tar.gz'),
-    electronVersionPath,
-  ).toString('utf-8').trim();
+  const electronVersion = findTarEntry(dataTar, electronVersionPath).toString('utf-8').trim();
   if (electronVersion !== DEBIAN_ELECTRON_VERSION) {
     throw new Error(`Unexpected Electron version in ${file}: ${electronVersion}`);
   }
-  const dataNames = new Set(listTarGz(members.get('data.tar.gz')));
+  const dataNames = new Set(listTar(dataTar));
   verifyNoFontArchiveEntries([...dataNames], file);
   const nativeRuntimeSummary = verifyNativeRuntimeSet(
-    members.get('data.tar.gz'),
+    dataTar,
     dataNames,
     expectedElf,
     file,
   );
   const appAsarPath = `./opt/official-document-ai-assistant-${mode}/resources/app.asar`;
   const appPackage = inspectAppAsar(
-    findTarGzEntry(members.get('data.tar.gz'), appAsarPath),
+    findTarEntry(dataTar, appAsarPath),
     file,
     mode,
   );
@@ -581,7 +622,7 @@ function verifyDebian(mode, arch, required) {
       throw new Error(`Missing ${requiredPath} in ${file}`);
     }
   }
-  const launcherInfo = findTarGzEntryInfo(members.get('data.tar.gz'), launcherPath);
+  const launcherInfo = findTarEntryInfo(dataTar, launcherPath);
   if ((launcherInfo.mode & 0o777) !== 0o755) {
     throw new Error(`Installed launcher is not executable in ${file}`);
   }
@@ -590,7 +631,7 @@ function verifyDebian(mode, arch, required) {
     launcherPath,
     `/opt/official-document-ai-assistant-${mode}/official-document-ai-assistant-${mode}`,
   );
-  const desktop = findTarGzEntry(members.get('data.tar.gz'), desktopPath).toString('utf-8');
+  const desktop = findTarEntry(dataTar, desktopPath).toString('utf-8');
   for (const expected of [
     `TryExec=/usr/bin/official-document-ai-assistant-${mode}`,
     `Exec=/usr/bin/official-document-ai-assistant-${mode}`,
@@ -609,7 +650,7 @@ function verifyDebian(mode, arch, required) {
     throw new Error(`Missing backend launcher in ${file}`);
   }
   const backendLauncherPath = [...dataNames].find((name) => name.endsWith('/resources/backend_server/backend_server'));
-  const backendLauncherInfo = findTarGzEntryInfo(members.get('data.tar.gz'), backendLauncherPath);
+  const backendLauncherInfo = findTarEntryInfo(dataTar, backendLauncherPath);
   const backendRuntime = verifyBackendLauncher(backendLauncherInfo, backendLauncherPath, expectedElf);
   const backendGlibc = backendRuntime.glibc ? [backendRuntime.glibc] : [];
   if (backendRuntime.kind === 'portable') {
@@ -617,7 +658,7 @@ function verifyDebian(mode, arch, required) {
       throw new Error(`Missing bundled Python in ${file}`);
     }
     const pythonPath = [...dataNames].find((name) => name.endsWith('/resources/python/bin/python3'));
-    const pythonLinkInfo = findTarGzEntryInfo(members.get('data.tar.gz'), pythonPath);
+    const pythonLinkInfo = findTarEntryInfo(dataTar, pythonPath);
     let pythonElfPath = pythonPath;
     if (pythonLinkInfo.type === '2') {
       if (!pythonLinkInfo.linkName || path.posix.isAbsolute(pythonLinkInfo.linkName)) {
@@ -638,7 +679,7 @@ function verifyDebian(mode, arch, required) {
     if (nativeRuntimePaths.some((name) => !name)) {
       throw new Error(`Missing a required Python native runtime component in ${file}`);
     }
-    const nativeRuntimeEntries = findTarGzEntriesInfo(members.get('data.tar.gz'), nativeRuntimePaths);
+    const nativeRuntimeEntries = findTarEntriesInfo(dataTar, nativeRuntimePaths);
     const pythonInfo = nativeRuntimeEntries.get(pythonElfPath);
     const pythonMode = pythonInfo.mode & 0o777;
     if (pythonMode !== 0o755) {

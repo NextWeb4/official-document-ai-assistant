@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.4.7",
   "description": "HaoXiang Document Assistant - document checking and intelligent processing desktop tool",
+  "license": "MIT",
   "author": {
     "name": "HaoXiang Huang",
     "email": "Rays688888@Gmail.com",
