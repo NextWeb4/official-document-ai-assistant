@@ -246,6 +246,12 @@ test('backend verifier accepts native PyInstaller and validates portable launche
   );
 });
 
+test('backend bundle excludes the unused readline extension', () => {
+  const spec = readFileSync(new URL('../../backend/backend_server.spec', import.meta.url), 'utf-8');
+
+  assert.match(spec, /excludes=\[[\s\S]*'readline'/);
+});
+
 test('package verifier scans every data archive entry for ELF payloads', () => {
   const verifier = readFileSync(new URL('./verify-packages.mjs', import.meta.url), 'utf-8');
 

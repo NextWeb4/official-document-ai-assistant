@@ -71,6 +71,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[
         'tkinter',
+        'readline',
         'matplotlib',
         'numpy',
         'pandas',
