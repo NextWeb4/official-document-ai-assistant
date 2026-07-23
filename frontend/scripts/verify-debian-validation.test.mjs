@@ -263,6 +263,9 @@ test('runtime verifier requires GUI and attributes backend startup to Electron',
   assert.match(runtime, /ALLOW_NON_RELEASE_NO_GUI=1/);
   assert.match(runtime, /ALLOW_NON_RELEASE_OS="\$\{ALLOW_NON_RELEASE_OS:-0\}"/);
   assert.match(runtime, /ALLOW_NON_RELEASE_OS must be 0 or 1/);
+  assert.match(runtime, /^APP_VERSION="\$\(sed .*package\.json.*\)"$/m);
+  assert.doesNotMatch(runtime, /^VERSION=/m);
+  assert.match(runtime, /DEB="release\/\$\{MODE\}-debian\/\$\{PACKAGE\}-\$\{APP_VERSION\}-\$\{ARCH\}\.deb"/);
   assert.match(
     runtime,
     /if \[\[ "\$OS_ID" != "debian"[\s\S]*ALLOW_NON_RELEASE_OS[\s\S]*requires Debian 10\.x[\s\S]*exit 1/,

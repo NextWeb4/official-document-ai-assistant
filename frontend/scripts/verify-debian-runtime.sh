@@ -9,7 +9,7 @@ KEEP_INSTALLED="${KEEP_INSTALLED:-0}"
 PORT="${PORT:-8765}"
 ALLOW_NON_RELEASE_OS="${ALLOW_NON_RELEASE_OS:-0}"
 ALLOW_NON_RELEASE_NO_GUI="${ALLOW_NON_RELEASE_NO_GUI:-0}"
-VERSION="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' package.json | head -n1)"
+APP_VERSION="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' package.json | head -n1)"
 
 usage() {
   cat <<'EOF'
@@ -90,7 +90,7 @@ case "$ALLOW_NON_RELEASE_NO_GUI" in
 esac
 
 PACKAGE="official-document-ai-assistant-${MODE}"
-DEB="release/${MODE}-debian/${PACKAGE}-${VERSION}-${ARCH}.deb"
+DEB="release/${MODE}-debian/${PACKAGE}-${APP_VERSION}-${ARCH}.deb"
 APP_DIR="/opt/${PACKAGE}"
 ELECTRON="${APP_DIR}/${PACKAGE}"
 BACKEND="${APP_DIR}/resources/backend_server/backend_server"
