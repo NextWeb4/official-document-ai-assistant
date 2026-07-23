@@ -180,6 +180,7 @@ def _kill_pid(pid: int) -> bool:
 def _is_port_available(port: int) -> bool:
     """Check whether the backend can bind its loopback IPv4 endpoint."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((HOST, port))
         except OSError:

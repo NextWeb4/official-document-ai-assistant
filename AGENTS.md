@@ -70,6 +70,7 @@
 - 发布作者元数据的单一来源是 `frontend/package.json`：姓名 `HaoXiang Huang`、邮箱 `Rays688888@Gmail.com`、主页 `https://nextweb4.github.io/`、许可证 `MIT`；Electron、README、About、安装包脚本与 Release Notes 必须与其一致。
 - Debian 的 `/opt` 安装目录固定为无空格的 `/opt/official-document-ai-assistant-{offline|online}`；用户可见名称继续由 `.desktop` 的 `Name=HaoXiang Document Assistant {Offline|Online}` 提供，不能用带空格的 `productName` 作为 Linux 安装目录。
 - Debian 容器 GUI 验收允许仅在隔离测试容器上授予 Chromium 创建命名空间所需的 `SYS_ADMIN` 与非默认 seccomp；不得因此给正式桌面入口追加 `--no-sandbox`。
+- 后端端口可用性探测必须保留 `SO_REUSEADDR` 后再尝试绑定 `127.0.0.1:8765`，避免把正常重启后的 `TIME_WAIT` 误判成不可信端口占用；实际监听进程仍必须通过 `/proc`/PID 与 `/api/health` 身份校验。
 
 ## 7. 禁止事项
 - 不允许把运行时用户数据写入 `rules/official/`、`templates/official/` 或打包资源目录；可写数据应走 `APP_DATA_DIR` 下目录。

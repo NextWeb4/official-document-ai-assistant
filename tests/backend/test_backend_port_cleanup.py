@@ -120,6 +120,31 @@ def test_linux_pids_for_socket_inodes_resolves_fake_proc_fds(tmp_path, monkeypat
     assert main._linux_pids_for_socket_inodes({"111", "222"}, tmp_path) == [321, 654]
 
 
+def test_port_availability_allows_immediate_restart_after_closed_connections(monkeypatch):
+    calls: list[tuple[object, ...]] = []
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def setsockopt(self, *args):
+            calls.append(("setsockopt", *args))
+
+        def bind(self, address):
+            calls.append(("bind", address))
+
+    monkeypatch.setattr(main.socket, "socket", lambda *_args: FakeSocket())
+
+    assert main._is_port_available(8765) is True
+    assert calls == [
+        ("setsockopt", main.socket.SOL_SOCKET, main.socket.SO_REUSEADDR, 1),
+        ("bind", (main.HOST, 8765)),
+    ]
+
+
 def test_force_exits_when_killed_process_does_not_release_port(monkeypatch, capsys):
     monkeypatch.setattr(main, "_is_port_available", lambda port: False)
     monkeypatch.setattr(main, "_find_pids_on_port", lambda port: [4321])
