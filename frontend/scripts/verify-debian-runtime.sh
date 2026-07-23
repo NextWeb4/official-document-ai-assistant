@@ -334,6 +334,31 @@ show_electron_log() {
   fi
 }
 
+port_is_bindable() {
+  local port_hex
+  if command -v python3 >/dev/null 2>&1; then
+    PORT_TO_CHECK="$PORT" python3 - <<'PY'
+import os
+import socket
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    sock.bind(("127.0.0.1", int(os.environ["PORT_TO_CHECK"])))
+except OSError:
+    raise SystemExit(1)
+finally:
+    sock.close()
+PY
+    return
+  fi
+
+  port_hex="$(printf '%04X' "$PORT")"
+  ! awk -v port=":${port_hex}" '
+    $2 ~ port "$" && $4 == "0A" { listening=1 }
+    END { exit(listening ? 0 : 1) }
+  ' /proc/net/tcp /proc/net/tcp6 2>/dev/null
+}
+
 cleanup() {
   local cleanup_failed=0
   if [[ -n "$ELECTRON_PID" ]] && kill -0 "$ELECTRON_PID" >/dev/null 2>&1; then
@@ -347,16 +372,14 @@ cleanup() {
     echo "ERROR: failed to stop installed application processes during cleanup." >&2
     cleanup_failed=1
   fi
-  for _ in $(seq 1 20); do
-    if ! curl -fsS --connect-timeout 1 --max-time 1 \
-      "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
+  for _ in $(seq 1 40); do
+    if port_is_bindable; then
       break
     fi
     sleep 0.25
   done
-  if curl -fsS --connect-timeout 1 --max-time 1 \
-    "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
-    echo "ERROR: backend health endpoint remained active after cleanup." >&2
+  if ! port_is_bindable; then
+    echo "ERROR: backend port remained unavailable after cleanup: 127.0.0.1:${PORT}." >&2
     cleanup_failed=1
   fi
   rm -rf "$APP_DATA"

@@ -292,7 +292,9 @@ test('runtime verifier requires GUI and attributes backend startup to Electron',
   assert.match(runtime, /grep -q 'Window shown' "\$LAUNCHER_LOG"/);
   assert.match(runtime, /grep -q 'Window shown' "\$ELECTRON_LOG"/);
   assert.match(runtime, /failed to stop installed application processes during cleanup/);
-  assert.match(runtime, /backend health endpoint remained active after cleanup/);
+  assert.match(runtime, /PORT_TO_CHECK="\$PORT" python3/);
+  assert.match(runtime, /sock\.bind\(\("127\.0\.0\.1", int\(os\.environ\["PORT_TO_CHECK"\]\)\)\)/);
+  assert.match(runtime, /backend port remained unavailable after cleanup/);
   assert.match(runtime, /XDG_STATE_HOME="\$XDG_STATE_HOME"/);
   assert.match(runtime, /expected app_mode=\{expected\}/);
   assert.match(runtime, /document assistant package is not installed after dpkg\/apt completed/);
@@ -318,6 +320,7 @@ test('Debian release workflow runs GUI validation for x64 and arm64 on Debian 10
   assert.match(workflow, /debian:10\.10-slim/);
   assert.match(workflow, /--cap-add=SYS_ADMIN/);
   assert.match(workflow, /--security-opt seccomp=unconfined/);
+  assert.match(workflow, /python3-minimal/);
   assert.match(workflow, /xauth xvfb/);
   assert.match(workflow, /verify-debian-runtime\.sh/);
   assert.doesNotMatch(workflow, /ALLOW_NON_RELEASE_(?:OS|NO_GUI)/);

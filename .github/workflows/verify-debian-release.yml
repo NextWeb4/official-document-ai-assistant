@@ -60,7 +60,7 @@ jobs:
               printf "Acquire::Check-Valid-Until \"false\";\n" > /etc/apt/apt.conf.d/99archive-valid-until
               apt-get update
               apt-get install -y --no-install-recommends \
-                bash ca-certificates curl findutils passwd procps sudo xauth xvfb
+                bash ca-certificates curl findutils passwd procps python3-minimal sudo xauth xvfb
               useradd --create-home --shell /bin/bash verifier
               printf "verifier ALL=(ALL) NOPASSWD:ALL\n" > /etc/sudoers.d/verifier
               chmod 0440 /etc/sudoers.d/verifier
