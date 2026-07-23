@@ -335,6 +335,7 @@ show_electron_log() {
 }
 
 cleanup() {
+  local cleanup_failed=0
   if [[ -n "$ELECTRON_PID" ]] && kill -0 "$ELECTRON_PID" >/dev/null 2>&1; then
     kill "$ELECTRON_PID" >/dev/null 2>&1 || true
   fi
@@ -342,7 +343,22 @@ cleanup() {
     kill "$APP_PID" >/dev/null 2>&1 || true
     wait "$APP_PID" >/dev/null 2>&1 || true
   fi
-  stop_installed_processes >/dev/null 2>&1 || true
+  if ! stop_installed_processes >/dev/null 2>&1; then
+    echo "ERROR: failed to stop installed application processes during cleanup." >&2
+    cleanup_failed=1
+  fi
+  for _ in $(seq 1 20); do
+    if ! curl -fsS --connect-timeout 1 --max-time 1 \
+      "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.25
+  done
+  if curl -fsS --connect-timeout 1 --max-time 1 \
+    "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
+    echo "ERROR: backend health endpoint remained active after cleanup." >&2
+    cleanup_failed=1
+  fi
   rm -rf "$APP_DATA"
   if [[ "$KEEP_INSTALLED" != "1" ]]; then
     if command -v sudo >/dev/null 2>&1; then
@@ -350,6 +366,9 @@ cleanup() {
     else
       dpkg -r "$PACKAGE" >/dev/null 2>&1 || true
     fi
+  fi
+  if [[ "$cleanup_failed" != "0" ]]; then
+    exit 1
   fi
 }
 trap cleanup EXIT

@@ -291,6 +291,8 @@ test('runtime verifier requires GUI and attributes backend startup to Electron',
   assert.match(runtime, /is_descendant_or_self "\$BACKEND_PID" "\$ELECTRON_PID"/);
   assert.match(runtime, /grep -q 'Window shown' "\$LAUNCHER_LOG"/);
   assert.match(runtime, /grep -q 'Window shown' "\$ELECTRON_LOG"/);
+  assert.match(runtime, /failed to stop installed application processes during cleanup/);
+  assert.match(runtime, /backend health endpoint remained active after cleanup/);
   assert.match(runtime, /XDG_STATE_HOME="\$XDG_STATE_HOME"/);
   assert.match(runtime, /expected app_mode=\{expected\}/);
   assert.match(runtime, /document assistant package is not installed after dpkg\/apt completed/);
