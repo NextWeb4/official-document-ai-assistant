@@ -527,7 +527,9 @@ RENDERER_PID=""
 WINDOW_SHOWN=0
 for _ in $(seq 1 40); do
   RENDERER_PID="$(find_renderer_pid "$ELECTRON_PID" || true)"
-  if [[ -n "$RENDERER_PID" ]] && grep -q 'Window shown' "$LAUNCHER_LOG" 2>/dev/null; then
+  if [[ -n "$RENDERER_PID" ]] \
+    && { grep -q 'Window shown' "$LAUNCHER_LOG" 2>/dev/null \
+      || grep -q 'Window shown' "$ELECTRON_LOG" 2>/dev/null; }; then
     WINDOW_SHOWN=1
     break
   fi
