@@ -321,8 +321,10 @@ test('Debian release workflow runs GUI validation for x64 and arm64 on Debian 10
 
   assert.match(workflow, /actions\/download-artifact@v4/);
   assert.match(workflow, /run-id: \$\{\{ inputs\.run_id \}\}/);
-  assert.match(workflow, /arch: x64[\s\S]*platform: linux\/amd64/);
-  assert.match(workflow, /arch: arm64[\s\S]*platform: linux\/arm64/);
+  assert.match(workflow, /arch: x64[\s\S]*runner: ubuntu-latest[\s\S]*platform: linux\/amd64/);
+  assert.match(workflow, /arch: arm64[\s\S]*runner: ubuntu-24\.04-arm[\s\S]*platform: linux\/arm64/);
+  assert.match(workflow, /runs-on: \$\{\{ matrix\.runner \}\}/);
+  assert.doesNotMatch(workflow, /setup-qemu-action/);
   assert.match(workflow, /debian:10\.10-slim/);
   assert.match(workflow, /--cap-add=SYS_ADMIN/);
   assert.match(workflow, /--security-opt seccomp=unconfined/);

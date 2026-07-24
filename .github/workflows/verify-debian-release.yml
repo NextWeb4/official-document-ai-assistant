@@ -13,22 +13,20 @@ permissions:
 
 jobs:
   runtime:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: x64
+            runner: ubuntu-latest
             platform: linux/amd64
           - arch: arm64
+            runner: ubuntu-24.04-arm
             platform: linux/arm64
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
 
       - uses: actions/download-artifact@v4
         with:
